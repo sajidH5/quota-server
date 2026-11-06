@@ -1,5 +1,5 @@
 /**
- * HTTP server for the quote handler (Cloud Run, or `npm run dev` locally).
+ * HTTP server for the quote handler (`npm run dev` locally).
  * Settings come from environment variables; locally from .env (see env.example).
  */
 import http from 'node:http';

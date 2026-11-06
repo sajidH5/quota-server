@@ -36,18 +36,10 @@ Use the Workers Paid plan. Building the PDF takes more than the Free plan's 10 m
 
 To change a setting later: Cloudflare dashboard › Workers & Pages › quota-server › Settings. `QUOTE_FROM_NAME`, `ALLOWED_ORIGINS` and `SEND_CONFIRMATION` are in `wrangler.jsonc`.
 
-## Deploy (Firebase App Hosting)
-
-```bash
-firebase deploy --only apphosting
-```
-
-`.env` is in `.gitignore`, so `firebase deploy` doesn't upload it. Set the settings on the backend first, or the server stops with "Missing settings". `apphosting.yaml` holds the server size: max 2 instances, 512 MiB.
-
 ## Check
 
 | Command | What it does |
 |---|---|
 | `npm run sample-pdf` | Runs the handler with the Brevo API stubbed out and writes `sample-quote.pdf` |
 | `BREVO_API_KEY=log` in `.env` | The server prints the emails instead of sending them |
-| Firebase console › App Hosting › braintree-quote › Logs | Logs of the deployed server, including failed emails |
+| Cloudflare dashboard › Workers & Pages › your Worker › Observability | Logs of the deployed Worker, including failed emails |
