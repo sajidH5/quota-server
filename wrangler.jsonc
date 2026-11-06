@@ -4,6 +4,10 @@
   "main": "src/handler.js",
   "compatibility_date": "2026-10-01",
   "observability": { "enabled": true },
+  // At most about 5 quote requests a minute from one IP address.
+  "ratelimits": [
+    { "name": "QUOTE_LIMITER", "namespace_id": "4201", "simple": { "limit": 5, "period": 60 } }
+  ],
   // BREVO_API_KEY, QUOTE_TO and QUOTE_FROM are secrets (.dev.vars.example). Don't add them here:
   // Cloudflare refuses a secret with the same name as a variable, and this repo is public.
   "vars": {

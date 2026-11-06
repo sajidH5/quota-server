@@ -217,6 +217,12 @@ export default {
         if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
         if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405, headers);
 
+        // Cloudflare's rate limiter; not there under server.js.
+        if (env.QUOTE_LIMITER) {
+            const { success } = await env.QUOTE_LIMITER.limit({ key: request.headers.get('CF-Connecting-IP') || 'unknown' });
+            if (!success) return json({ error: 'Too many quote requests. Please wait a minute.' }, 429, headers);
+        }
+
         try {
             return await handleQuote(request, env, headers);
         } catch (error) {

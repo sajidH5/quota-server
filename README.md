@@ -8,6 +8,7 @@ Backend for the cart page's "Request a quote" form. It turns the request into a 
 - **Staff email:** goes to `QUOTE_TO`. The PDF and the tax-exempt certificate (if any, up to 4 MB) are attached, and Reply goes to the shopper.
 - **Shopper email:** a confirmation with the PDF, sent when `SEND_CONFIRMATION=true`.
 - **Spam:** a hidden field and a 3-second minimum fill time. Bots get a fake success.
+- **Rate limit:** on Cloudflare, about 5 requests a minute from one IP address (`wrangler.jsonc`). Over that, the form shows "Too many quote requests".
 - **Allowed shops:** only the domains in `ALLOWED_ORIGINS` can post the form.
 
 The settings are environment variables: see `env.example`. The sender in `QUOTE_FROM` must be a verified sender in Brevo.
