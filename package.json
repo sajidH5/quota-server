@@ -1,0 +1,33 @@
+{
+  "name": "braintree-quote-server",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --env-file=.env server.js",
+    "sample-pdf": "node scripts/sample-pdf.js",
+    "dev:worker": "wrangler dev"
+  },
+  "dependencies": {
+    "pdf-lib": "1.17.1"
+  },
+  "devDependencies": {
+    "wrangler": "4.155.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "BREVO_API_KEY": {
+        "description": "Brevo API key: **SMTP & API > API keys**. Use a key with **Transactional emails** access, and leave Brevo's Authorised IPs check off."
+      },
+      "QUOTE_TO": {
+        "description": "Where quote requests are sent. Separate several addresses with commas."
+      },
+      "QUOTE_FROM": {
+        "description": "The address emails are sent from. It must be a verified sender in Brevo."
+      }
+    }
+  }
+}

@@ -1,0 +1,4 @@
+# The Deploy to Cloudflare page asks for these. Copy to .dev.vars for `npm run dev`.
+BREVO_API_KEY=xkeysib-...
+QUOTE_TO=quotes@example.com
+QUOTE_FROM=quotes@example.com

@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "quota-server",
+  "main": "src/handler.js",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  // BREVO_API_KEY, QUOTE_TO and QUOTE_FROM are secrets (.dev.vars.example). Don't add them here:
+  // Cloudflare refuses a secret with the same name as a variable, and this repo is public.
+  "vars": {
+    "QUOTE_FROM_NAME": "Braintree Scientific",
+    // Shops allowed to post the form (comma separated, no trailing slash).
+    "ALLOWED_ORIGINS": "https://www.braintreesci.com,https://braintreesci.com,https://braintree-staging.mybigcommerce.com,https://store-z0gr7jrd1j.mybigcommerce.com,https://store-ye27j2homb.mybigcommerce.com",
+    // "true" also emails the shopper a copy of the PDF.
+    "SEND_CONFIRMATION": "true"
+  }
+}

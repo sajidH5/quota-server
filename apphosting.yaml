@@ -1,0 +1,8 @@
+# Firebase App Hosting settings (Cloud Run).
+# The server's settings (Brevo API key, emails, allowed shops) are environment variables; see README.
+runConfig:
+  minInstances: 0
+  maxInstances: 2
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512

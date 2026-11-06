@@ -1,0 +1,9 @@
+.env
+.dev.vars
+.wrangler/
+.firebaserc
+node_modules/
+env.yaml
+sample-quote.pdf
+.firebase/
+firebase-debug*.log
