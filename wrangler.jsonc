@@ -3,6 +3,8 @@
   "name": "quota-server",
   "main": "src/handler.js",
   "compatibility_date": "2026-10-01",
+  // The Word document library needs Node's Buffer.
+  "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
   // At most about 5 quote requests a minute from one IP address.
   "ratelimits": [

@@ -1,12 +1,13 @@
 # Quote server
 
-Backend for the cart page's "Request a quote" form. It turns the request into a PDF and emails it through the Brevo API. It runs as a Cloudflare Worker, or as a small Node server (`server.js`).
+Backend for the cart page's "Request a quote" form. It turns the request into a Word document (.docx) laid out like Braintree's "Preliminary Quote Request", and emails it through the Brevo API. Staff edit it into the final quote and send it back. It runs as a Cloudflare Worker, or as a small Node server (`server.js`).
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/sajidH5/quota-server)
 
 - `POST /api/quotes`: the form, sent by `assets/js/theme/global/bt-quote.js`.
-- **Staff email:** goes to `QUOTE_TO`. The PDF and the tax-exempt certificate (if any, up to 4 MB) are attached, and Reply goes to the shopper.
-- **Shopper email:** a confirmation with the PDF, sent when `SEND_CONFIRMATION=true`.
+- **Staff email:** goes to `QUOTE_TO`. The Word document and the tax-exempt certificate (if any, up to 4 MB) are attached, and Reply goes to the shopper.
+- **Shopper email:** a confirmation with the Word document, sent when `SEND_CONFIRMATION=true`.
+- **Document:** `src/quote-docx.js`. The logo and the IBM Plex fonts are in `assets/` and embedded in each document, so it looks the same on computers without them. After changing a file in `assets/`, run `npm run assets`. Fonts: SIL Open Font License (`assets/OFL.txt`).
 - **Spam:** a hidden field and a 3-second minimum fill time. Bots get a fake success.
 - **Rate limit:** on Cloudflare, about 5 requests a minute from one IP address (`wrangler.jsonc`). Over that, the form shows "Too many quote requests".
 - **Allowed shops:** only the domains in `ALLOWED_ORIGINS` can post the form.
@@ -33,7 +34,7 @@ For the local theme (`stencil start`), set `bt-quote-endpoint` in `config.json` 
    - `QUOTE_FROM`: the sender. It must be a verified sender in Brevo.
 3. Send the Worker's address (`quota-server.<your-subdomain>.workers.dev`) to whoever manages the theme. It goes in the theme setting `bt-quote-endpoint`.
 
-Use the Workers Paid plan. Building the PDF takes more than the Free plan's 10 ms of CPU per request, so Free can reject quote requests with Error 1102.
+Use the Workers Paid plan. Building the Word document takes about 200 ms of CPU per request, far over the Free plan's 10 ms, so Free can reject quote requests with Error 1102.
 
 To change a setting later: Cloudflare dashboard › Workers & Pages › quota-server › Settings. `QUOTE_FROM_NAME`, `ALLOWED_ORIGINS` and `SEND_CONFIRMATION` are in `wrangler.jsonc`.
 
@@ -41,6 +42,6 @@ To change a setting later: Cloudflare dashboard › Workers & Pages › quota-se
 
 | Command | What it does |
 |---|---|
-| `npm run sample-pdf` | Runs the handler with the Brevo API stubbed out and writes `sample-quote.pdf` |
+| `npm run sample-quote` | Runs the handler with the Brevo API stubbed out and writes `sample-quote.docx` |
 | `BREVO_API_KEY=log` in `.env` | The server prints the emails instead of sending them |
 | Cloudflare dashboard › Workers & Pages › your Worker › Observability | Logs of the deployed Worker, including failed emails |

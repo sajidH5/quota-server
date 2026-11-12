@@ -2,20 +2,23 @@
  * Braintree "Request a quote" backend.
  *
  * POST /api/quotes (multipart form from the cart page, theme file assets/js/theme/global/bt-quote.js)
- *   -> checks the request, builds the quote PDF and emails it through the Brevo API to QUOTE_TO,
- *      with the tax-exempt certificate attached. Optionally sends the shopper a copy.
+ *   -> checks the request, builds the quote as a Word document (staff can edit it and send it back)
+ *      and emails it through the Brevo API to QUOTE_TO, with the tax-exempt certificate attached.
+ *      Optionally sends the shopper a copy.
  * Settings: environment variables (see env.example). Runs as a Cloudflare Worker, or under server.js.
  */
-import { quotePdf, money } from './pdf.js';
+import { quoteDocx, money } from './quote-docx.js';
 
 const MAX_FILE = 4 * 1024 * 1024; // Brevo's per-attachment limit
 const MAX_ITEMS = 200;
 const MIN_FILL_MS = 3000; // faster than this is a bot
 const FIELDS = {
-    name: 120, email: 160, phone: 40, institution: 160, department: 160, pi: 120,
-    street: 200, city: 100, state: 100, zip: 20, country: 80,
-    po: 120, neededBy: 20, taxExempt: 3, notes: 2000, currency: 3, page: 300,
+    name: 120, email: 160, phone: 40, institution: 160, department: 160,
+    shipName: 120, shipBuilding: 120, shipStreet: 200, shipCity: 100, shipState: 100, shipZip: 20, shipCountry: 80,
+    billContact: 120, billInstitution: 160, billSame: 3, billStreet: 200, billCity: 100, billState: 100, billZip: 20, billCountry: 80,
+    taxExempt: 3, currency: 3, page: 300,
 };
+const SHIP_REQUIRED = { shipStreet: 'street address', shipCity: 'city', shipState: 'state', shipZip: 'ZIP code' };
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 class InputError extends Error {}
@@ -96,6 +99,15 @@ async function readQuote(request) {
     }
     if (!quote.name || !quote.institution) throw new InputError('Please fill in your name and institution.');
     if (!EMAIL.test(quote.email)) throw new InputError('Please enter a valid email address.');
+    const missing = Object.keys(SHIP_REQUIRED).filter(field => !quote[field]);
+    if (missing.length) throw new InputError(`Please fill in the shipping ${missing.map(field => SHIP_REQUIRED[field]).join(', ')}.`);
+    // Blank recipient or billing details fall back to the requester and the shipping address.
+    quote.shipName = quote.shipName || quote.name;
+    quote.shipCountry = quote.shipCountry || 'United States';
+    quote.billInstitution = quote.billInstitution || quote.institution;
+    if (quote.billSame === 'yes') {
+        ['Street', 'City', 'State', 'Zip', 'Country'].forEach(part => { quote[`bill${part}`] = quote[`ship${part}`]; });
+    }
     quote.currency = /^[A-Z]{3}$/.test(quote.currency) ? quote.currency : 'USD';
     quote.items = readItems(form.get('items'));
 
@@ -124,16 +136,17 @@ function itemsHtml(quote) {
 
 function staffHtml(quote) {
     const line = (label, value) => (value ? `<tr><td style="padding:2px 12px 2px 0;color:#5a6275">${label}</td><td>${escapeHtml(value)}</td></tr>` : '');
-    const address = [quote.street, quote.city, quote.state, quote.zip, quote.country].filter(Boolean).join(', ');
+    const address = prefix => [quote[`${prefix}Street`], quote[`${prefix}City`], quote[`${prefix}State`], quote[`${prefix}Zip`], quote[`${prefix}Country`]].filter(Boolean).join(', ');
     return `<div style="font-family:Arial,sans-serif;color:#14213d">
         <h2 style="color:#0b46b0;margin:0 0 4px">Quote request ${quote.number}</h2>
-        <p style="margin:0 0 16px;color:#5a6275">${escapeHtml(quote.date)}. The PDF is attached. Reply to this email to answer the customer.</p>
+        <p style="margin:0 0 16px;color:#5a6275">${escapeHtml(quote.date)}. The quote request is attached as a Word document: edit it into the final quote. Reply to this email to answer the customer.</p>
         <table style="font-size:14px;margin-bottom:16px">
             ${line('Name', quote.name)}${line('Email', quote.email)}${line('Phone', quote.phone)}
-            ${line('Institution', quote.institution)}${line('Department', quote.department)}${line('PI', quote.pi)}
-            ${line('Ship to', address)}${line('PO / funding', quote.po)}${line('Needed by', quote.neededBy)}
+            ${line('Institution', quote.institution)}${line('Department / lab', quote.department)}
+            ${line('Ship to', [quote.shipName, quote.shipBuilding, address('ship')].filter(Boolean).join(', '))}
+            ${line('Bill to', [quote.billContact, quote.billInstitution, address('bill')].filter(Boolean).join(', '))}
             ${line('Tax exempt', quote.taxExempt === 'yes' ? `Yes${quote.certificateName ? ', certificate attached' : ', no certificate attached'}` : 'No')}
-            ${line('Notes', quote.notes)}${line('Sent from', quote.page)}
+            ${line('Sent from', quote.page)}
         </table>
         ${itemsHtml(quote)}
     </div>`;
@@ -177,9 +190,11 @@ async function handleQuote(request, env, headers) {
     if (!quote) return json({ number }, 200, headers); // bot: pretend it worked
 
     quote.number = number;
-    quote.date = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'long', timeStyle: 'short' });
-    const pdf = { name: `Quote-request-${number}.pdf`, content: base64(await quotePdf(quote)) };
-    const attachments = [pdf];
+    const now = new Date();
+    quote.date = now.toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'long', timeStyle: 'short' });
+    quote.day = now.toLocaleDateString('en-US', { timeZone: 'America/New_York', dateStyle: 'long' });
+    const docx = { name: `Quote-request-${number}.docx`, content: await quoteDocx(quote) };
+    const attachments = [docx];
     if (quote.certificate) attachments.push({ name: `Tax-exempt-${quote.certificateName}`, content: base64(quote.certificate) });
 
     await sendEmail(env, {
@@ -197,7 +212,7 @@ async function handleQuote(request, env, headers) {
                 replyTo: { email: env.QUOTE_TO.split(',')[0].trim() },
                 subject: `Your Braintree Scientific quote request ${number}`,
                 htmlContent: customerHtml(quote),
-                attachment: [pdf],
+                attachment: [docx],
             });
         } catch (error) {
             console.error('confirmation email failed', error.message); // the request itself was sent

@@ -8,11 +8,12 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "dev": "node --env-file=.env server.js",
-    "sample-pdf": "node scripts/sample-pdf.js",
-    "dev:worker": "wrangler dev"
+    "dev:worker": "wrangler dev",
+    "sample-quote": "node scripts/sample-quote.js",
+    "assets": "node scripts/build-assets.js"
   },
   "dependencies": {
-    "pdf-lib": "1.17.1"
+    "docx": "9.14.0"
   },
   "devDependencies": {
     "wrangler": "4.155.0"

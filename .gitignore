@@ -4,6 +4,6 @@
 .firebaserc
 node_modules/
 env.yaml
-sample-quote.pdf
+sample-quote.docx
 .firebase/
 firebase-debug*.log
