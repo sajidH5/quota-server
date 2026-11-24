@@ -12,7 +12,7 @@ globalThis.fetch = async (url, init) => { sent.push(JSON.parse(init.body)); retu
 
 const items = Array.from({ length: 14 }, (_, i) => ({
     sku: i % 3 ? `MDK-M-${i}` : 'SCRUFF-RAT-LARGE-VERY-LONG-SKU', name: i % 4 ? 'Mouse Dissection Surgical Kit with Storage Case' : 'Rodent Restrainer, Clear Acrylic, Adjustable Nose Cone for Rats 200-400 g × “special” µ',
-    options: i % 2 ? ['Size: Large', 'Color: Blue'] : [], quantity: i + 1, unitPrice: 165 + i * 12.5,
+    options: i % 2 ? ['Size: Large', 'Color: Blue'] : [], quantity: i + 1,
 }));
 const form = new FormData();
 Object.entries({

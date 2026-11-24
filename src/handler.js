@@ -7,7 +7,7 @@
  *      Optionally sends the shopper a copy.
  * Settings: environment variables (see env.example). Runs as a Cloudflare Worker, or under server.js.
  */
-import { quoteDocx, money } from './quote-docx.js';
+import { quoteDocx } from './quote-docx.js';
 
 const MAX_FILE = 4 * 1024 * 1024; // Brevo's per-attachment limit
 const MAX_ITEMS = 200;
@@ -57,7 +57,7 @@ function quoteNumber() {
     const now = new Date();
     const date = now.toISOString().slice(2, 10).replace(/-/g, '');
     const random = Array.from(crypto.getRandomValues(new Uint8Array(3)), b => b.toString(36).padStart(2, '0')).join('').slice(0, 4).toUpperCase();
-    return `Q-${date}-${random}`;
+    return `WBQ-${date}-${random}`; // WBQ: a web quote
 }
 
 function readItems(raw) {
@@ -75,7 +75,6 @@ function readItems(raw) {
         name: String(item.name || '').slice(0, 300),
         options: (Array.isArray(item.options) ? item.options : []).slice(0, 20).map(o => String(o).slice(0, 200)),
         quantity: Math.max(1, Math.min(100000, parseInt(item.quantity, 10) || 1)),
-        unitPrice: Number(item.unitPrice),
         productId: item.productId,
         variantId: item.variantId,
     }));
@@ -127,10 +126,9 @@ function itemsHtml(quote) {
             <td style="padding:6px 8px;border-top:1px solid #e0e4ec">${item.quantity}</td>
             <td style="padding:6px 8px;border-top:1px solid #e0e4ec">${escapeHtml(item.sku)}</td>
             <td style="padding:6px 8px;border-top:1px solid #e0e4ec">${escapeHtml(item.name)}${item.options.length ? `<br><small style="color:#5a6275">${escapeHtml(item.options.join(' / '))}</small>` : ''}</td>
-            <td style="padding:6px 8px;border-top:1px solid #e0e4ec;text-align:right">${money(item.unitPrice, quote.currency)}</td>
         </tr>`).join('');
     return `<table style="border-collapse:collapse;width:100%;font-size:14px">
-        <tr style="background:#f3f6fb;text-align:left"><th style="padding:6px 8px">Qty</th><th style="padding:6px 8px">SKU</th><th style="padding:6px 8px">Product</th><th style="padding:6px 8px;text-align:right">Unit price</th></tr>
+        <tr style="background:#f3f6fb;text-align:left"><th style="padding:6px 8px">Qty</th><th style="padding:6px 8px">SKU</th><th style="padding:6px 8px">Product</th></tr>
         ${rows}</table>`;
 }
 

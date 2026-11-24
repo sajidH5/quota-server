@@ -1,7 +1,7 @@
 /**
  * The quote request as a Word document (.docx), laid out like Braintree's
  * "Preliminary Quote Request" design: US Letter, IBM Plex fonts (embedded, so it looks the same
- * on computers without them), logo, three address blocks, items table, totals and next steps.
+ * on computers without them), logo, three address blocks, items table (no prices) and next steps.
  * Staff can edit it and send it back to the customer.
  */
 import {
@@ -102,12 +102,6 @@ function box(children, { fill, padding }) {
     })], [WIDTH]);
 }
 
-export function money(value, currency) {
-    const number = Number(value);
-    if (!Number.isFinite(number)) return '';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(number);
-}
-
 function header(quote) {
     const logo = new ImageRun({
         type: 'png',
@@ -132,11 +126,11 @@ function header(quote) {
 
     const meta = (name, value, font) => new TableRow({
         children: [
-            cell(para(text(name, { color: COLOR.muted }), { align: AlignmentType.RIGHT, lineHeight: 16 }), { width: 72 }),
-            cell(para(text(value, { font }), { align: AlignmentType.RIGHT, lineHeight: 16 }), { width: 86 }),
+            cell(para(text(name, { color: COLOR.muted }), { align: AlignmentType.RIGHT, lineHeight: 16 }), { width: 62 }),
+            cell(para(text(value, { font }), { align: AlignmentType.RIGHT, lineHeight: 16 }), { width: 96 }),
         ],
     });
-    const details = table([meta('Request no.', quote.number, MONO_MEDIUM), meta('Submitted', quote.day, SANS)], [72, 86], { align: AlignmentType.RIGHT });
+    const details = table([meta('Request no.', quote.number, MONO_MEDIUM), meta('Submitted', quote.day, SANS)], [62, 96], { align: AlignmentType.RIGHT });
 
     const right = [
         para(text('Quote Request', { size: 19.5, color: COLOR.blue, font: BOLD }), { align: AlignmentType.RIGHT, lineHeight: 26 }),
@@ -158,7 +152,7 @@ function header(quote) {
 function notice() {
     return box([
         para(text('This is not your final quote.', { color: COLOR.blue, font: BOLD }), { lineHeight: 15 }),
-        para(text('This summary helps us generate your final quote. Our team will review your tax status and add shipping costs, then send your official quote by email.'), { lineHeight: 13.6 }),
+        para(text('This summary helps us generate your final quote. Our team will review your tax status and add pricing and shipping costs, then send your official quote by email.'), { lineHeight: 13.6 }),
     ], { fill: COLOR.notice, padding: { top: 8, bottom: 8, left: 13, right: 13 } });
 }
 
@@ -209,15 +203,16 @@ function taxStatus(quote) {
     ], { padding: { top: 7, bottom: 7, left: 10, right: 10 } });
 }
 
-const ITEM_WIDTHS = [36, 84, 151.5, 45, 48, 79.5, 84];
-const ITEM_ALIGN = [AlignmentType.LEFT, AlignmentType.LEFT, AlignmentType.LEFT, AlignmentType.CENTER, AlignmentType.LEFT, AlignmentType.RIGHT, AlignmentType.RIGHT];
+// No prices: staff add them on the final quote.
+const ITEM_WIDTHS = [36, 84, 315, 45, 48];
+const ITEM_ALIGN = [AlignmentType.LEFT, AlignmentType.LEFT, AlignmentType.LEFT, AlignmentType.CENTER, AlignmentType.LEFT];
 
 function itemsTable(quote) {
     const head = new TableRow({
         tableHeader: true,
         cantSplit: true,
         height: { value: twips(23.3), rule: HeightRule.EXACT },
-        children: ['#', 'Catalog no.', 'Description', 'Qty', 'UOM', 'Unit price', 'Extended'].map((title, i) => cell(
+        children: ['#', 'Catalog no.', 'Description', 'Qty', 'UOM'].map((title, i) => cell(
             para(text(title.toUpperCase(), { size: 8, color: COLOR.white, font: BOLD, tracking: 0.8 }), { align: ITEM_ALIGN[i] }),
             { width: ITEM_WIDTHS[i], shading: COLOR.blue, verticalAlign: VerticalAlignTable.CENTER, margins: { left: 8, right: 8 } },
         )),
@@ -233,8 +228,6 @@ function itemsTable(quote) {
             ],
             [para(text(item.quantity), { align: AlignmentType.CENTER, lineHeight: 13.6 })],
             [para(text(item.uom || 'EA'), { lineHeight: 13.6 })],
-            [para(text(money(item.unitPrice, quote.currency)), { align: AlignmentType.RIGHT, lineHeight: 13.6 })],
-            [para(text(money(item.unitPrice * item.quantity, quote.currency), { font: BOLD }), { align: AlignmentType.RIGHT, lineHeight: 13.6 })],
         ];
         return new TableRow({
             cantSplit: true,
@@ -244,33 +237,6 @@ function itemsTable(quote) {
         });
     });
     return table([head, ...rows], ITEM_WIDTHS);
-}
-
-function totals(quote) {
-    const subtotal = quote.items.reduce((sum, item) => sum + (Number.isFinite(item.unitPrice) ? item.unitPrice * item.quantity : 0), 0);
-    const row = (name, value, { muted = false, borders = NO_BORDERS, bottom = 0 } = {}) => new TableRow({
-        children: [
-            cell(para(text(name, { color: COLOR.address }), { lineHeight: 17.5 }), { width: 140, borders, margins: { bottom } }),
-            cell(para(text(value, { color: muted ? COLOR.muted : COLOR.ink }), { align: AlignmentType.RIGHT, lineHeight: 17.5 }), { width: 100, borders, margins: { bottom } }),
-        ],
-    });
-    const total = new TableRow({
-        children: [
-            cell(para(text('Estimated subtotal', { size: 10.5, font: BOLD }), { lineHeight: 18 }), { width: 140, margins: { top: 7 } }),
-            cell(para(text(money(subtotal, quote.currency), { size: 10.5, font: BOLD }), { align: AlignmentType.RIGHT, lineHeight: 18 }), { width: 100, margins: { top: 7 } }),
-        ],
-    });
-    const heavy = { ...NO_BORDERS, bottom: line(COLOR.ink, 1.5) };
-    const currencyName = quote.currency === 'USD' ? 'US dollars' : quote.currency;
-    return [
-        table([
-            row('Product subtotal', money(subtotal, quote.currency)),
-            row('Shipping', 'Added on final quote', { muted: true }),
-            row('Sales tax', 'Added on final quote', { muted: true, borders: heavy, bottom: 4 }),
-            total,
-        ], [140, 100], { align: AlignmentType.RIGHT }),
-        para(text(`All prices in ${currencyName}. Excludes shipping and applicable tax.`, { size: 8.5, color: COLOR.muted }), { align: AlignmentType.RIGHT, before: 2, lineHeight: 14 }),
-    ];
 }
 
 function nextSteps() {
@@ -362,8 +328,6 @@ export function quoteDocx(quote) {
                 taxStatus(quote),
                 spacer(11.5),
                 itemsTable(quote),
-                spacer(14),
-                ...totals(quote),
                 spacer(14),
                 ...nextSteps(),
                 spacer(14),
